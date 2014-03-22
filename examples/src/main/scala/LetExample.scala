@@ -1,12 +1,11 @@
 package prog
 
-import scala.tools.nsc._
-
-trait Foo
+import prog.config.Bar._
 
 object LetExample extends App {
 	
 	override def main(args: Array[String]) = {
-		TemplateMacro.template("file")
+		val template: String = TemplateMacro.template("file")
+		println(template)
 	}
 }
