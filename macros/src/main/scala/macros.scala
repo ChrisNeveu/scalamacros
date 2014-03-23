@@ -40,36 +40,6 @@ object TemplateLoader {
 
 	def parseTemplate(str: String, c: Context) = {
 		import c.universe._
-		def oldParse(str: String, interp: Boolean, strAcc: String, treeAcc: c.Tree, expr: String): c.Tree = {
-			str.headOption.map { cur =>
-				val next = try str.tail.head catch {
-					case e: java.lang.UnsupportedOperationException => ""
-					case e: java.util.NoSuchElementException => ""
-				}
-				if (interp) {
-					if (cur == '}' && next == '}') {
-						val rawExpr = c.parse(expr)
-						val rawStr = Literal(Constant(strAcc))
-						val accPlusStr = Apply(Select(treeAcc, TermName("$plus")), List(rawStr))
-						val newAcc = Apply(Select(accPlusStr, TermName("$plus")), List(rawExpr))
-						oldParse(str.tail.tail, false, "", newAcc, "")
-					} else {
-						oldParse(str.tail, interp, strAcc, treeAcc, expr + cur)
-					}
-				} else {
-					if (cur == '{' && next == '{') {
-						oldParse(str.tail.tail, true, strAcc, treeAcc, "")
-					} else {
-						oldParse(str.tail, interp, strAcc + cur, treeAcc, "")
-					}
-				}
-			} getOrElse {
-				if (strAcc.isEmpty)
-					treeAcc
-				else
-					Apply(Select(treeAcc, TermName("$plus")), List(Literal(Constant(strAcc))))
-			}
-		}
 		def incAcc(tree: c.Tree, acc: c.Tree => c.Tree): c.Tree => c.Tree =
 			((t: c.Tree) => acc(Apply(Select(tree, TermName("$plus")), List(t))))
 		def init(str: String, acc: c.Tree => c.Tree, strAcc: String): c.Tree =
