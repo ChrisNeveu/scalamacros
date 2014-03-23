@@ -1,1 +1,1 @@
-test {{ (5 + 6).toString }} lorem ipsum
+test {{ foobar }} lorem ipsum

@@ -29,6 +29,7 @@ object ScalaMacroDebugBuild extends Build {
 		settings = buildSettings ++ Seq(
 			libraryDependencies := Seq(
 				"org.scala-lang" % "scala-reflect" % scalaV,
+				"org.scala-lang" % "scala-xml" % "2.11.0-M4",
 				"org.yaml" % "snakeyaml" % "1.13"))
 	)
 
