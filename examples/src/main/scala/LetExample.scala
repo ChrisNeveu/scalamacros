@@ -1,6 +1,6 @@
 package prog
 
-import prog.config.Bar._
+import prog.mac.config.LoadedConf
 
 object LetExample extends App {
 	

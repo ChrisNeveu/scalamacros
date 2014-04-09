@@ -1,9 +1,8 @@
 package prog.config
 
-import prog.mac.config.{ ConfigLoader, Config }
+import prog.mac.config.LoadedConf
 import org.yaml.snakeyaml.Yaml
 
-object Bar {
-	val config = ConfigLoader.load("config.yaml")
+object Qux {
+	@LoadedConf val foo = 6
 }
-
