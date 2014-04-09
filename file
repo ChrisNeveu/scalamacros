@@ -1,1 +1,7 @@
 test {{ foobar }} lorem ipsum
+{#if bool}
+     We got this!
+{#else}
+    We don't have this...
+{#endif}
+really
