@@ -54,6 +54,8 @@ object TemplateLoader {
 class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 	import c.universe._
 
+	override def skipWhitespace = false
+
 	def parse(str: String): c.Tree = parseAll(program, str).get
 
 	def program: Parser[c.Tree] = rep(node) ^^
