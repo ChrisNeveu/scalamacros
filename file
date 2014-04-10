@@ -12,3 +12,8 @@ really
       We don't got this...
    {#endif}
 {#endraw}
+Match Statement: 
+{#match 4}
+   {#case 4}This is an int.{#endcase}
+   {#case _}This is something else.{#endcase}
+{#endmatch}

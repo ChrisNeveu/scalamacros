@@ -68,7 +68,8 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		text |
 		interp |
 		ifExpr |
-		rawExpr
+		rawExpr |
+		matchExpr
 
 	def text: Parser[c.Tree] =
 		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
@@ -103,9 +104,22 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 
 	def rawExpr: Parser[c.Tree] =
 		"{#raw}" ~> rawText <~ "{#endraw}"
+	
+	def matchExpr: Parser[c.Tree] =
+		("{#match " ~> """[^}]+""".r <~ "}") ~
+		rep(caseExpr) <~ """(\s)*\{#endmatch\}""".r ^^ {
+			case expr ~ cases => Match(c.parse(expr), cases)
+		}
+	
+	def caseExpr: Parser[CaseDef] =
+		("""(\s)*\{#case """.r ~> """([^}]+)""".r <~ """\}""".r) ~
+		rep(node) <~ "{#endcase}" ^^ {
+			case expr ~ nodes => c.parse("Unit match { case " + expr + " => Unit }") match {
+				case Match(_, (CaseDef(pat, guard, body) :: _)) =>
+					CaseDef(pat, guard, joinNodes(nodes))
+			}
+		}
 /*
-	def matchExpr: Parser[Any] = """{#match (.*?)}""".r ~ rep(caseExpr) ~ "{#endcase}"
-	def caseExpr: Parser[Any] = """{#case (.*?)}""".r ~ rep(node) ~ "{#endcase}"
 
 	def optExpr: Parser[Any] =
 		"{#opt" ~ ScalaId ~ "as" ~ ScalaId ~ "}" ~
