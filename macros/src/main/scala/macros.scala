@@ -64,23 +64,45 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 
 	def program: Parser[c.Tree] = rep(node) ^^ joinNodes _
 	
-	def node: Parser[c.Tree] = text | interp | ifExpr
+	def node: Parser[c.Tree] =
+		text |
+		interp |
+		ifExpr |
+		rawExpr
 
-	def text: Parser[c.Tree] = """([^({{)]+)""".r ^^
-		(strLiteral => Literal(Constant(strLiteral)))
+	def text: Parser[c.Tree] =
+		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
+			println("TEXT " + strLiteral + "\n\n")
+			Literal(Constant(strLiteral))
+		}
+
+	def rawText: Parser[c.Tree] =
+		"""((.|\n)+)(?=\{#endraw\})""".r ^^
+			(strLiteral => Literal(Constant(strLiteral)))
 	
-	def interp: Parser[c.Tree] = """\{\{(.*?)\}\}""".r ^^
-		(expr => c.parse(expr))
+	def interp: Parser[c.Tree] =
+		"""\{\{(.*?)\}\}""".r ^^ { expr =>
+			println("INTERP " + expr + "\n\n")
+			c.parse(expr)
+		}
 
-	// If(Literal(Constant(true)), Literal(Constant(5)), Literal(Constant(6)))
 	def ifExpr: Parser[c.Tree] =
 		(("{#if " ~> """[^}]+""".r <~ "}") ~
 		 rep(node) ~
 		 opt("{#else}" ~> rep(node))) <~
 		"{#endif}" ^^ {
-			case expr ~ nodes ~ elseN => 
-				If(c.parse(expr), joinNodes(nodes), elseN.map(joinNodes _).getOrElse(Literal(Constant(""))))
+			case expr ~ nodes ~ elseN => {
+				println("COND " + expr + "\n\n")
+				println("IFNODES " + nodes + "\n\n")
+				println("ELSENODES " + elseN + "\n\n")
+				If(c.parse(expr),
+					joinNodes(nodes),
+					elseN.map(joinNodes _).getOrElse(Literal(Constant(""))))
+			}
 		}
+
+	def rawExpr: Parser[c.Tree] =
+		"{#raw}" ~> rawText <~ "{#endraw}"
 /*
 	def matchExpr: Parser[Any] = """{#match (.*?)}""".r ~ rep(caseExpr) ~ "{#endcase}"
 	def caseExpr: Parser[Any] = """{#case (.*?)}""".r ~ rep(node) ~ "{#endcase}"

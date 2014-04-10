@@ -1,7 +1,14 @@
-test {{ foobar }} lorem ipsum
+test {{ foobar }} lorem {}ipsum
 {#if bool}
-     We got this!
+   We got this!
 {#else}
-    We don't have this...
+   We don't got this...
 {#endif}
 really
+{#raw}
+   {#if bool}
+      We got this!
+   {#else}
+      We don't got this...
+   {#endif}
+{#endraw}
