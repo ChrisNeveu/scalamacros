@@ -71,7 +71,8 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		rawExpr |
 		matchExpr |
 		applyExpr |
-		letExpr
+		letExpr |
+		optExpr
 
 	def text: Parser[c.Tree] =
 		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
@@ -139,15 +140,31 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 					List(ValDef(Modifiers(), newTermName(name), TypeTree(), c.parse(value))),
 					joinNodes(nodes))
 		}
+
+	def optExpr: Parser[c.Tree] =
+		("{#opt " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ " as ") ~
+		("""[a-zA-z][0-9a-zA-z_-]*""".r <~ "}") ~
+		rep(node) ~
+		opt("{#none}" ~> rep(node)) <~
+		"{#endopt}" ^^ {
+			case option ~ some ~ nodes ~ optNodes =>
+				Apply(Select(
+					Apply(Select(Ident(newTermName(option)), newTermName("map")),
+						List(Function(
+							List(ValDef(
+								Modifiers(Flag.PARAM),
+								newTermName(some),
+								TypeTree(),
+								EmptyTree)),
+							joinNodes(nodes)))),
+					newTermName("getOrElse")),
+					List(optNodes.map(joinNodes _).getOrElse(Literal(Constant("")))))
+		}
 /*
 
-	def optExpr: Parser[Any] =
-		"{#opt" ~ ScalaId ~ "as" ~ ScalaId ~ "}" ~
-		rep(node) ~
-		opt("{#none}" ~ rep(node)) ~
-		"{#endopt}"
-
 	def comment: Parser[Any] = """{--(.*?)--}""".r
+
+	Apply(Select(Ident(newTermName("foo")), newTermName("map")), List(Function(List(ValDef(Modifiers(PARAM), newTermName("x"), TypeTree(), EmptyTree)), Literal(Constant(4)))))
 	*/
 }
 

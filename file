@@ -22,3 +22,9 @@ Let Block:
 {#let zag = "test"}
 The value of zag is: {{zag}}
 {#endlet}
+Option Block
+{#opt optional as somestuff}
+   The optional value is defined and is {{somestuff}}
+{#none}
+   The optional value is undefined.
+{#endopt}
