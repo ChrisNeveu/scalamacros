@@ -70,7 +70,8 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		ifExpr |
 		rawExpr |
 		matchExpr |
-		applyExpr
+		applyExpr |
+		letExpr
 
 	def text: Parser[c.Tree] =
 		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
@@ -127,6 +128,17 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		"{#endapply}" ^^ {
 			case func ~ nodes => Apply(Ident(newTermName(func)), List(joinNodes(nodes)))
 		}
+
+	def letExpr: Parser[c.Tree] =
+		("{#let " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ """ ?= ?""".r) ~
+		("""[^}]+""".r <~ "}") ~
+		 rep(node) <~
+		"{#endlet}" ^^ {
+			case name ~ value ~ nodes =>
+				Block(
+					List(ValDef(Modifiers(), newTermName(name), TypeTree(), c.parse(value))),
+					joinNodes(nodes))
+		}
 /*
 
 	def optExpr: Parser[Any] =
@@ -136,13 +148,6 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		"{#endopt}"
 
 	def comment: Parser[Any] = """{--(.*?)--}""".r
-
-	def applyExpr: Parser[c.Tree] =
-		("{#let " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ """ ?= ?""".r ~ """[^}]+""".r <~ "}") ~
-		 rep(node) ~
-		"{#endapply}" ^^ {
-			case name ~ value ~ nodes => 
-		}
 	*/
 }
 

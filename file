@@ -18,3 +18,7 @@ Match Statement:
    {#case _}This is something else.{#endcase}
 {#endmatch}
 {#apply repeat3}This is repeated thrice.{#endapply}
+Let Block:
+{#let zag = "test"}
+The value of zag is: {{zag}}
+{#endlet}
