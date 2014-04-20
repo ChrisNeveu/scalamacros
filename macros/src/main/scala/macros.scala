@@ -72,7 +72,8 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		matchExpr |
 		applyExpr |
 		letExpr |
-		optExpr
+		optExpr |
+		forExpr
 
 	def text: Parser[c.Tree] =
 		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
@@ -159,6 +160,24 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 							joinNodes(nodes)))),
 					newTermName("getOrElse")),
 					List(optNodes.map(joinNodes _).getOrElse(Literal(Constant("")))))
+		}
+
+	def forExpr: Parser[c.Tree] =
+		("{#for " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ " in ") ~
+		("""[a-zA-z][0-9a-zA-z_-]*""".r <~ "}") ~
+		rep(node) <~
+		"{#endfor}" ^^ {
+			case item ~ list ~ nodes =>
+				Select(
+					Apply(Select(Ident(newTermName(list)), newTermName("map")),
+						List(Function(
+							List(ValDef(
+								Modifiers(Flag.PARAM),
+								newTermName(item),
+								TypeTree(),
+								EmptyTree)),
+							joinNodes(nodes)))),
+					newTermName("mkString"))
 		}
 /*
 

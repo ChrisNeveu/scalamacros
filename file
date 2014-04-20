@@ -28,3 +28,7 @@ Option Block
 {#none}
    The optional value is undefined.
 {#endopt}
+For statement:
+{#for fruit in list}
+   The fruit of the day is {{fruit}}
+{#endfor}
