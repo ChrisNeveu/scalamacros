@@ -73,10 +73,11 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 		applyExpr |
 		letExpr |
 		optExpr |
-		forExpr
+		forExpr |
+		comment
 
 	def text: Parser[c.Tree] =
-		"""(?:(?!\{\{|\{#)(.|\n))+""".r ^^ { strLiteral => 
+		"""(?:(?!\{\{|\{#|\{--)(.|\n))+""".r ^^ { strLiteral => 
 			println("TEXT " + strLiteral + "\n\n")
 			Literal(Constant(strLiteral))
 		}
@@ -179,9 +180,10 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 							joinNodes(nodes)))),
 					newTermName("mkString"))
 		}
-/*
 
-	def comment: Parser[Any] = """{--(.*?)--}""".r
+	def comment: Parser[c.Tree] =
+		"""\{--(.*?)--\}""".r ^^ (_ => Literal(Constant("")))
+/*
 
 	Apply(Select(Ident(newTermName("foo")), newTermName("map")), List(Function(List(ValDef(Modifiers(PARAM), newTermName("x"), TypeTree(), EmptyTree)), Literal(Constant(4)))))
 	*/

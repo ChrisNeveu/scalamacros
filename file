@@ -32,3 +32,4 @@ For statement:
 {#for fruit in list}
    The fruit of the day is {{fruit}}
 {#endfor}
+{-- This is a comment --}
