@@ -66,3 +66,42 @@ package object html {
 		//def a = new HtmlTag("a", List.empty, new HtmlSeq())
 	}
 }
+
+package object simplehtml {
+	
+	import annotation.implicitNotFound
+	
+	@implicitNotFound("Value of type ${T} could not be converted to Html.")
+	trait toHtml[-T] {
+		def renderHtml(html: T): String
+	}
+	trait HtmlSerializable[-T] {
+		def renderHtml: String
+	}
+	implicit def createHtml[T:toHtml](a: T) =
+		new HtmlSerializable[T] {
+			def renderHtml = implicitly[toHtml[T]].renderHtml(a)
+		}
+	
+	implicit object String_Html extends toHtml[String] {
+		def renderHtml(html: String) = escape(html)
+	}
+	
+	implicit object Int_Html extends toHtml[Int] {
+		def renderHtml(i: Int) = i.toString
+	}
+	
+	implicit object Float_Html extends toHtml[Float] {
+		def renderHtml(f: Float) = f.toString
+	}
+	
+	implicit object Double_Html extends toHtml[Double] {
+		def renderHtml(d: Double) = d.toString
+	}
+	
+	type Html = HtmlSerializable[_]
+	
+	implicit object Iter_Html extends toHtml[Iterable[Html]] {
+		def renderHtml(htmls: Iterable[Html]) = htmls.map(_.renderHtml).mkString
+	}
+}
