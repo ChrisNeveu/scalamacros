@@ -14,7 +14,7 @@ object BuildSettings {
 		resolvers += Resolver.sonatypeRepo("snapshots"),
 		resolvers += Resolver.sonatypeRepo("releases"),
 		addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full),
-		mainClass in (Compile,run) := Some("prog.LetExample")
+		mainClass in (Compile,run) := Some("prog.example.LetExample")
 	)
 }
 

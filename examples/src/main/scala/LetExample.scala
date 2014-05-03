@@ -1,6 +1,6 @@
-package prog
+package prog.example
 
-import prog.mac.config.LoadedConf
+import schrine.template.html._
 
 object LetExample extends App {
 
@@ -10,8 +10,8 @@ object LetExample extends App {
 		val foobar = "cats!"
 		val list = List("apples", "oranges", "bananas")
 		val bool = false
-		val optional = None
-		val template: String = TemplateLoader.load("file")
+		val optional: Option[String] = None
+		val template: String = loadTemplate("file")
 		println(template)
 	}
 }

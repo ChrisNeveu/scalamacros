@@ -2,7 +2,7 @@ package prog
 
 import scala.xml.Utility.escape
 import scala.collection.generic.SeqFactory
-
+/*
 package object html {
 
 	sealed abstract class Html {
@@ -66,7 +66,7 @@ package object html {
 		//def a = new HtmlTag("a", List.empty, new HtmlSeq())
 	}
 }
-
+*/
 package object simplehtml {
 	
 	import annotation.implicitNotFound
@@ -75,13 +75,17 @@ package object simplehtml {
 	trait toHtml[-T] {
 		def renderHtml(html: T): String
 	}
+	
 	trait HtmlSerializable[-T] {
 		def renderHtml: String
 	}
+	
 	implicit def createHtml[T:toHtml](a: T) =
 		new HtmlSerializable[T] {
 			def renderHtml = implicitly[toHtml[T]].renderHtml(a)
 		}
+	
+	type Html = HtmlSerializable[_]
 	
 	implicit object String_Html extends toHtml[String] {
 		def renderHtml(html: String) = escape(html)
@@ -98,8 +102,6 @@ package object simplehtml {
 	implicit object Double_Html extends toHtml[Double] {
 		def renderHtml(d: Double) = d.toString
 	}
-	
-	type Html = HtmlSerializable[_]
 	
 	implicit object Iter_Html extends toHtml[Iterable[Html]] {
 		def renderHtml(htmls: Iterable[Html]) = htmls.map(_.renderHtml).mkString

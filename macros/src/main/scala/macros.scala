@@ -45,7 +45,7 @@ object TemplateLoader {
 			case _ => c.abort(c.enclosingPosition, "template only takes a literal value.")
 		}
 		val str = scala.io.Source.fromFile(p).mkString
-		val parser = new TemplateParser[c.type](c)
+		val parser = new StringParser[c.type](c)
 		val foo = parser.parse(str)
 		c.Expr(foo)
 	}
@@ -189,45 +189,144 @@ class TemplateParser[C <: Context](val c: C) extends RegexParsers {
 	*/
 }
 
-trait Schrine {
+class StringParser[C <: Context](val c: C) extends SchrineParser[String, C] {
 
-	case class ScalaExpr(self: String)
-	
-	//case class IfExpr(self: String)
+	def baseNode: Parser[String] =
+		"""(?:(?!\{\{|\{#|\{--)(.|\n))+""".r
 }
 
-object Html extends RegexParsers {
+trait SchrineParser[T, C <: Context] extends RegexParsers {
 
-	val Id = """([a-zA-z]+)""".r
+	def baseNode: Parser[T]
 
-	val Attr = Id ~ """="([^""]*)"""".r
+	val c: C
+	import c.universe._
+	import scala.reflect.runtime.{universe => ru}
 
-	def openTag = "<" ~ Id ~ rep(Attr) ~ ">"
+	override def skipWhitespace = false
 
-	def closeTag = "</" ~ Id ~ ">"
+	def parse(str: String): c.Tree = parseAll(program, str).get
 
-	def node: Parser[Any] = text | element
-	def text: Parser[Any] = """([^<>&])""".r
-	def element: Parser[Any] = openTag ~ rep(node) ~ closeTag
-}
+	def joinNodes(nodes: List[c.Tree]) =
+		nodes.reduceLeft((acc: c.Tree, n: c.Tree) =>
+			Apply(Select(acc, newTermName("$plus")), List(n)))
 
-trait SchrineParser extends RegexParsers {
+	def program: Parser[c.Tree] = rep(node) ^^ joinNodes _
 
-	def node = ???
+	def subNode: Parser[c.Tree] = baseNode ^^
+		((x: T) => reify(x) match {
+			case Expr(t: c.Tree) => t
+		})
+
+	def text: Parser[c.Tree] =
+		"""(?:(?!\{\{|\{#|\{--)(.|\n))+""".r ^^
+			(strLiteral => Literal(Constant(strLiteral)))
 	
-	val ScalaId = """([a-zA-z0-9\-_]+)""".r
+	def node: Parser[c.Tree] =
+		subNode |
+		interp |
+		ifExpr |
+		rawExpr |
+		matchExpr |
+		applyExpr |
+		letExpr |
+		optExpr |
+		forExpr |
+		comment
+
+	def rawText: Parser[c.Tree] =
+		"""((.|\n)+)(?=\{#endraw\})""".r ^^
+			(strLiteral => Literal(Constant(strLiteral)))
 	
-	def interp: Parser[Any] = """{{(.*?)}}""".r
-	def ifExpr: Parser[Any] = """{#if (.*?)}""".r ~ rep(node) ~ "{#endif}"
+	def interp: Parser[c.Tree] =
+		"""\{\{(.*?)\}\}""".r ^^
+			(expr => c.parse(expr))
 
-	def matchExpr: Parser[Any] = """{#match (.*?)}""".r ~ rep(caseExpr) ~ "{#endcase}"
-	def caseExpr: Parser[Any] = """{#case (.*?)}""".r ~ rep(node) ~ "{#endcase}"
+	def ifExpr: Parser[c.Tree] =
+		(("{#if " ~> """[^}]+""".r <~ "}") ~
+		 rep(node) ~
+		 opt("{#else}" ~> rep(node))) <~
+		"{#endif}" ^^ {
+			case expr ~ nodes ~ elseN =>
+				If(c.parse(expr),
+					joinNodes(nodes),
+					elseN.map(joinNodes _).getOrElse(Literal(Constant(""))))
+		}
 
-	def optExpr: Parser[Any] =
-		"{#opt" ~ ScalaId ~ "as" ~ ScalaId ~ "}" ~
+	def rawExpr: Parser[c.Tree] =
+		"{#raw}" ~> rawText <~ "{#endraw}"
+	
+	def matchExpr: Parser[c.Tree] =
+		("{#match " ~> """[^}]+""".r <~ "}") ~
+		rep(caseExpr) <~ """(\s)*\{#endmatch\}""".r ^^ {
+			case expr ~ cases => Match(c.parse(expr), cases)
+		}
+	
+	def caseExpr: Parser[CaseDef] =
+		("""(\s)*\{#case """.r ~> """([^}]+)""".r <~ """\}""".r) ~
+		rep(node) <~ "{#endcase}" ^^ {
+			case expr ~ nodes => c.parse("Unit match { case " + expr + " => Unit }") match {
+				case Match(_, (CaseDef(pat, guard, body) :: _)) =>
+					CaseDef(pat, guard, joinNodes(nodes))
+			}
+		}
+
+	def applyExpr: Parser[c.Tree] =
+		("{#apply " ~> """[^}]+""".r <~ "}") ~
+		 rep(node) <~
+		"{#endapply}" ^^ {
+			case func ~ nodes => Apply(Ident(newTermName(func)), List(joinNodes(nodes)))
+		}
+
+	def letExpr: Parser[c.Tree] =
+		("{#let " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ """ ?= ?""".r) ~
+		("""[^}]+""".r <~ "}") ~
+		 rep(node) <~
+		"{#endlet}" ^^ {
+			case name ~ value ~ nodes =>
+				Block(
+					List(ValDef(Modifiers(), newTermName(name), TypeTree(), c.parse(value))),
+					joinNodes(nodes))
+		}
+
+	def optExpr: Parser[c.Tree] =
+		("{#opt " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ " as ") ~
+		("""[a-zA-z][0-9a-zA-z_-]*""".r <~ "}") ~
 		rep(node) ~
-		opt("{#none}" ~ rep(node)) ~
-		"{#endopt}"
+		opt("{#none}" ~> rep(node)) <~
+		"{#endopt}" ^^ {
+			case option ~ some ~ nodes ~ optNodes =>
+				Apply(Select(
+					Apply(Select(Ident(newTermName(option)), newTermName("map")),
+						List(Function(
+							List(ValDef(
+								Modifiers(Flag.PARAM),
+								newTermName(some),
+								TypeTree(),
+								EmptyTree)),
+							joinNodes(nodes)))),
+					newTermName("getOrElse")),
+					List(optNodes.map(joinNodes _).getOrElse(Literal(Constant("")))))
+		}
 
-	def comment: Parser[Any] = """{--(.*?)--}""".r
+	def forExpr: Parser[c.Tree] =
+		("{#for " ~> """[a-zA-z][0-9a-zA-z_-]*""".r <~ " in ") ~
+		("""[a-zA-z][0-9a-zA-z_-]*""".r <~ "}") ~
+		rep(node) <~
+		"{#endfor}" ^^ {
+			case item ~ list ~ nodes =>
+				Select(
+					Apply(Select(Ident(newTermName(list)), newTermName("map")),
+						List(Function(
+							List(ValDef(
+								Modifiers(Flag.PARAM),
+								newTermName(item),
+								TypeTree(),
+								EmptyTree)),
+							joinNodes(nodes)))),
+					newTermName("mkString"))
+		}
+
+	def comment: Parser[c.Tree] =
+		"""\{--(.*?)--\}""".r ^^ (_ => Literal(Constant("")))
 }
