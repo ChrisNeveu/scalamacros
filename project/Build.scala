@@ -3,8 +3,20 @@ import Keys._
 
 object BuildSettings {
 
-	val scalaV = "2.10.4"
+	val scalaV = "2.11.0"
 	val paradiseVersion = "2.0.0-M3"
+
+	def cached(cacheBaseDirectory: File, inStyle: FilesInfo.Style)(action: => Unit): Set[File] => Unit = {
+		import Path._
+		lazy val inCache = Difference.inputs(cacheBaseDirectory / "in-cache", inStyle)
+		inputs => {
+			inCache(inputs) { inReport =>
+				println("Cached function " + !inReport.modified.isEmpty + "\n\n")
+				if(!inReport.modified.isEmpty) action
+			}
+		}
+	}
+	val recompileWhenFileChanges = taskKey[Unit]("Recompiles the project when a file changes")
 	
 	val buildSettings = Defaults.defaultSettings ++ Seq (
 		organization	:= "com.chrisneveu",
@@ -13,8 +25,17 @@ object BuildSettings {
 		scalacOptions += "-Ymacro-debug-lite",
 		resolvers += Resolver.sonatypeRepo("snapshots"),
 		resolvers += Resolver.sonatypeRepo("releases"),
-		addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full),
-		mainClass in (Compile,run) := Some("prog.example.LetExample")
+		mainClass in (Compile,run) := Some("prog.example.LetExample"),
+		watchSources <++= baseDirectory map { path => ((path / "templates") ** "*.schrine").get },
+    	recompileWhenFileChanges := {
+       	val base = baseDirectory.value
+       	val mySpecialFile = baseDirectory.value / "templates" / "main.schrine"
+			println("my file " + mySpecialFile + "\n\n")
+       	val cache = cacheDirectory.value / "my_cache_dir"
+       	val cachedFunction = cached(cache, FilesInfo.lastModified)(IO.delete((classDirectory in Compile).value))
+       	cachedFunction(mySpecialFile.get.toSet)
+       },
+		compile <<= ((compile in Compile) dependsOn recompileWhenFileChanges)
 	)
 }
 
@@ -34,6 +55,7 @@ object ScalaMacroDebugBuild extends Build {
 			libraryDependencies := Seq(
 				"org.scala-lang" % "scala-reflect" % scalaV,
 				"org.scala-lang" % "scala-xml" % "2.11.0-M4",
+				"org.scala-lang" % "scala-parser-combinators" % "2.11.0-M4",
 				"org.yaml" % "snakeyaml" % "1.13") ++
 				(if (scalaV.startsWith("2.10"))
 					List("org.scalamacros" % "quasiquotes" % paradiseVersion cross CrossVersion.full)

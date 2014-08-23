@@ -2,7 +2,7 @@ package prog
 
 import scala.xml.Utility.escape
 import scala.collection.generic.SeqFactory
-/*
+
 package object html {
 
 	sealed abstract class Html {
@@ -25,48 +25,34 @@ package object html {
 
 	case class HtmlAttr(
 		val name: String,
-		private[HtmlAttr] val text: String) extends Html {
+		private val text: String) {
 
 		override def toString =
 			if (name.toLowerCase == "src")
-				escape(new Url(text).toString)
+				HtmlUrl(text).toString
 			else
 				escape(text)
 	}
 
-	case class HtmlSeq(val self: Seq[Html]) extends Html
-
-	object conversions {
-		def createHtmlSeq(seq: Seq[Html]) = new HtmlSeq(seq)
+	case class HtmlSeq(val self: Seq[Html]) extends Html {
+		override def toString = self.map(_.toString).mkString("\n")
 	}
 
-	trait HtmlSerializable[T] {
-		def toHtml(a: T): Html
-	}
-
-	object HtmlSerializable {
-
-		implicit object HtmlSerializableString extends HtmlSerializable[String] {
-			def toHtml(a: String) = HtmlText(a)
-		}
-
-		implicit object HtmlSerializableInt extends HtmlSerializable[Int] {
-			def toHtml(a: Int) = HtmlText(a.toString)
-		}
-	}
-
-	case class Url(private val text: String) {
+	case class HtmlUrl(private val text: String) {
 
 		private def percentEncode(t: String) = t
 
 		override def toString = percentEncode(text)
 	}
-
-	object Html {
-		//def a = new HtmlTag("a", List.empty, new HtmlSeq())
+	
+	import annotation.implicitNotFound
+	
+	@implicitNotFound("Value of type ${T} could not be converted to Html.")
+	trait toHtml[-T] {
+		def toHtml(t: T): Html
 	}
 }
-*/
+
 package object simplehtml {
 	
 	import annotation.implicitNotFound

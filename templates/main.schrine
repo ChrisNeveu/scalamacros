@@ -1,0 +1,34 @@
+test {{ foobar }} lorem {}ipsum foo
+{#if bool}
+   We got this!
+{#else}
+   We don't got this...
+{#endif}
+really
+{#raw}
+   {#if bool}
+      We got this!
+   {#else}
+      We don't got this...
+   {#endif}
+{#endraw}
+Match Statement: 
+{#match 4}
+   {#case 4}This is an int.{#endcase}
+   {#case _}This is something else.{#endcase}
+{#endmatch}
+{#apply repeat3}This is repeated thrice.{#endapply}
+Let Block:
+{#let zag = "test"}
+The value of zag is: {{zag}}
+{#endlet}
+Option Block
+{#opt optional as somestuff}
+   The optional value is defined and is {{somestuff}}
+{#none}
+   The optional value is undefined.
+{#endopt}
+For statement:
+{#for fruit in list}
+   The fruit of the day is {{fruit}}
+{#endfor}

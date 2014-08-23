@@ -49,7 +49,7 @@ package object html {
 		def renderHtml(d: Double) = d.toString
 	}
 	
-	private class SchrineParser[C <: Context](val c: C) extends RegexParsers { 
+	class SchrineParser[C <: Context](val c: C) extends RegexParsers { 
 		
 		import c.universe._
 	
