@@ -25,6 +25,20 @@ object FileMacro {
 	}
 }
 
+object EvalMacro {
+	def -|[A](a: A): A = macro evalImpl[A]
+
+	def evalImpl[A](c: Context)(a: c.Expr[A]): c.Expr[A] = {
+		import c.universe._
+		val treeReset = c.resetLocalAttrs(a.tree)
+		val newExpr = c.Expr(treeReset)
+		val evaluated: A = c.eval(newExpr)
+		val literal = c.Expr(Literal(Constant(evaluated)))
+		
+		reify { literal.splice }
+	}
+}
+
 /**
  * Eventually this should be a typed class "class TemplateLoader[T]"
  * where T is the type that the interpolated statements must conform to.

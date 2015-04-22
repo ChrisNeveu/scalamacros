@@ -1,6 +1,9 @@
 package prog.example
 
 import schrine.template.html._
+import prog.EvalMacro._
+
+import scala.concurrent.duration.DurationInt
 
 object LetExample extends App {
 
@@ -14,5 +17,8 @@ object LetExample extends App {
 		val bar = ""
 		val template: String = loadTemplate("templates/main.schrine")
 		println(template)
+
+		val test: Option[Int] = -|(Some(5))
+		println("eval result: " + test + "\n")
 	}
 }
