@@ -16,3 +16,10 @@ object Bar {
       case Black ⇒ "black"
    }
 }
+
+object foo {
+   @enum
+   class Eff {
+      One
+   }
+}

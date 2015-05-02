@@ -34,9 +34,7 @@ object enum {
             val cases = impl.body.collect {
                case Ident(name) ⇒
                   val enumType = enumName.toTypeName
-                  q"""val ${name.toTermName} : $enumType = new $enumType {
-                     def unapply(a : $enumType) : Boolean = a == ${name.toTermName}
-                  }"""
+                  q"""case object ${name.toTermName} extends $enumType"""
             }
             val companionObj = companion match {
                case Some(ModuleDef(mods, objName, objImpl)) ⇒ ModuleDef(
@@ -49,7 +47,7 @@ object enum {
                   Template(impl.parents, impl.self, init :: cases))
             }
             List(
-               q"sealed abstract class ${enumName.toTypeName}",
+               q"sealed abstract class ${enumName.toTypeName} extends Product with Serializable",
                companionObj)
          case _ ⇒ c.abort(NoPosition, "Enum must be a class.")
       }
