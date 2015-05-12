@@ -23,3 +23,9 @@ object foo {
       One
    }
 }
+
+@config object Config {
+   val foo = 5
+   val bar = Option(4)
+   val baz = Option(3)
+}
